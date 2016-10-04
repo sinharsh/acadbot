@@ -15,12 +15,12 @@ var fs = require('fs');
 var server = restify.createServer();
 //server.use(academyDialog.verifyBotFramework({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' }));
 //server.post('academybot/v1/messages', academyDialog.verifyBotFramework(),academyDialog.listen());
-server.listen(process.env.PORT||3978 ,process.env.ip , function () {
+server.listen(process.env.PORT||3978 ,process.env.ip  , function () {
     console.log('%s listening to %s', server.name, server.url);
 });
 
-//var connector = new builder.ChatConnector({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' });
-var connector = new builder.ChatConnector({ appId: '', appSecret: '' });
+var connector = new builder.ChatConnector({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' });
+//var connector = new builder.ChatConnector({ appId: '', appSecret: '' });
 var academyDialog = new builder.UniversalBot(connector);
 server.post('/api/messages', connector.listen());
 
