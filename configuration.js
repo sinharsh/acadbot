@@ -3,11 +3,12 @@
 Configurations
 **/
 module.exports = {
-        ip :"10.111.187.85",
+      //  ip :"10.111.187.85",
+	  
         publicip : "54.90.159.251",
         db_port : 8080,
 
-	port : 5601,
+	//port : 5601,
 	db_username : 'root',
 	db_password : 'root',
 	db_name : 'chatbot',

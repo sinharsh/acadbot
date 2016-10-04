@@ -6,29 +6,39 @@ var orient = require('./db');
 var utilities = require('./utilities');
 var fs = require('fs');
 
-var luisDialog = new builder.LuisDialog(config.model);
-var academyDialog = new builder.BotConnectorBot();
+//var luisDialog = new builder.LuisDialog(config.model);
+//var academyDialog = new builder.BotConnectorBot();
+
 //var academyDialog = new builder.BotConnectorBot({ appId: 'proDIGIAdvisor', appSecret: 'd628b2d894e04d6a93e03d4f3ca99ba8' });
 //{ appId: 'chatbot123', appSecret: '59f44ecb3f704bb49f1f2a9635e5e33c' }
 //BOT REST end point
 var server = restify.createServer();
-server.use(academyDialog.verifyBotFramework({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' }));
-server.post('academybot/v1/messages', academyDialog.verifyBotFramework(),academyDialog.listen());
-server.listen(config.port,config.ip,function () {
+//server.use(academyDialog.verifyBotFramework({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' }));
+//server.post('academybot/v1/messages', academyDialog.verifyBotFramework(),academyDialog.listen());
+server.listen(process.env.PORT||3978 ,process.env.ip , function () {
     console.log('%s listening to %s', server.name, server.url);
-})
+});
+
+var connector = new builder.ChatConnector({ appId: 'f6e40f1a-f77d-47ac-a3d3-1920ba8140bf', appSecret: 'G6E9sY593AxqAhQyBYgiTgO' });
+//var connector = new builder.ChatConnector({ appId: '', appSecret: '' });
+var academyDialog = new builder.UniversalBot(connector);
+server.post('/api/messages', connector.listen());
+
 //LUIS Starts here
-academyDialog.add('/luis', luisDialog.onDefault(builder.DialogAction.send(prompts.default_response)));
-luisDialog.on('Good', '/userGood');
-luisDialog.on('Not Good', '/userBad');
-luisDialog.on('Current Skills', '/getCurrentSkills');
-luisDialog.on('Find Course', '/findCourse');
-luisDialog.on('Helpful', '/helpful');
-luisDialog.on('Not Helpful', '/notHelpful');
-luisDialog.on('End of Conversation','/endOfConversation');
-luisDialog.on('None','/none');
+var recognizer = new builder.LuisRecognizer(config.model);
+var luisDialog = new builder.IntentDialog({ recognizers: [recognizer] });
+
+academyDialog.dialog('/luis', luisDialog.onDefault(builder.DialogAction.send(prompts.default_response)));
+luisDialog.matches('Good', '/userGood');
+luisDialog.matches('Not Good', '/userBad');
+luisDialog.matches('Current Skills', '/getCurrentSkills');
+luisDialog.matches('Find Course', '/findCourse');
+luisDialog.matches('Helpful', '/helpful');
+luisDialog.matches('Not Helpful', '/notHelpful');
+luisDialog.matches('End of Conversation','/endOfConversation');
+luisDialog.matches('None','/none');
 // User just said something, Intent is None , but it might have Topics
-academyDialog.add('/none', [
+academyDialog.dialog('/none', [
 	function(session,args) {
 		console.log("Args : ",args);
 		for(var i=0; i < args.entities.length; i++) {
@@ -72,7 +82,7 @@ academyDialog.add('/none', [
 
 ]);
 // User want to find some course info
-academyDialog.add('/findCourse' , [
+academyDialog.dialog('/findCourse' , [
 	function(session,args) {
 		console.log("Skills Length :"+ args.entities.length);
                 console.log("ARgs : "+args);
@@ -100,7 +110,7 @@ academyDialog.add('/findCourse' , [
 	}
 ]);
 // Topic asked exists in Knowledge base
-academyDialog.add('/topicExists' , [
+academyDialog.dialog('/topicExists' , [
 	function(session) {
 //		session.send(prompts.recommend_skills);
 		console.log("Going to print duration");
@@ -163,7 +173,7 @@ academyDialog.add('/topicExists' , [
 	}
 ]);
 // Topic asked not exists in the knowledge base
-academyDialog.add('/topicNotExists',[
+academyDialog.dialog('/topicNotExists',[
 	function(session) {
 		builder.Prompts.text(session,prompts.kb_skill_not_exists);
 	},
@@ -172,7 +182,7 @@ academyDialog.add('/topicNotExists',[
 	}
 ]);
 // Get current skills from user
-academyDialog.add('/getCurrentSkills', [
+academyDialog.dialog('/getCurrentSkills', [
         function(session,args) {
                 console.log("Skills Length :"+ args.entities.length);
                 console.log("ARgs : "+args);
@@ -197,7 +207,7 @@ academyDialog.add('/getCurrentSkills', [
 
 ]);
 // Bot recommendation was helpful
-academyDialog.add('/helpful', [
+academyDialog.dialog('/helpful', [
 	function(session,args) {
 		console.log("Inside Halp");
 		session.userData.happy = "true";
@@ -209,7 +219,7 @@ academyDialog.add('/helpful', [
 ]);
 
 // The Bot course recommendation was not helpful
-academyDialog.add('/notHelpful', [
+academyDialog.dialog('/notHelpful', [
         function(session,args) {
 		console.log("Inside not help");
                 session.userData.happy = "false";
@@ -221,7 +231,7 @@ academyDialog.add('/notHelpful', [
 ]);
 
 // End of Conversation . Wind up the conversation
-academyDialog.add('/endOfConversation',[
+academyDialog.dialog('/endOfConversation',[
         function(session,args) {
 		console.log("Inside End ");
 		console.log('args is ',args);
@@ -253,7 +263,7 @@ academyDialog.add('/endOfConversation',[
 	}
 ]);
 // Users direct queries
-academyDialog.add('/userDirectChat'[
+academyDialog.dialog('/userDirectChat'[
         function(session) {
 		session.userData.intent = "FindCourse";
                 builder.Prompts.text(session,prompts.ask_more);
@@ -264,7 +274,7 @@ academyDialog.add('/userDirectChat'[
 ]);
 
 // User is happy at the time of chat
-academyDialog.add('/userGood', [
+academyDialog.dialog('/userGood', [
         function(session,args) {
 		session.userData.mood = "happy";
 		if(session.userData.firstTime) {
@@ -276,7 +286,7 @@ academyDialog.add('/userGood', [
 ]);
 
 // User feels bad at the time of chat
-academyDialog.add('/userBad',[
+academyDialog.dialog('/userBad',[
 	function(session,args) {
 		session.userData.mood = "unhappy";
 		if(session.userData.firstTime) {
@@ -289,7 +299,7 @@ academyDialog.add('/userBad',[
 ]);
 
 // New user. Need to collect the current skills details from user
-academyDialog.add('/userNew', [
+academyDialog.dialog('/userNew', [
 	function(session) {
 		if(session.userData.mood == "unhappy") {
 			builder.Prompts.confirm(session,prompts.user_not_ok +" "+session.userData.name+"."+prompts.bot_help + prompts.user_first_time);
@@ -313,7 +323,7 @@ academyDialog.add('/userNew', [
 ]);
 
 // Existing user, we have the current skills details
-academyDialog.add('/userExisting',[
+academyDialog.dialog('/userExisting',[
 	function(session) {
 		if(session.userData.mood == "unhappy") {
 			builder.Prompts.text(session,prompts.user_not_ok+" "+session.userData.name+"."+prompts.user_existing);		
@@ -328,7 +338,7 @@ academyDialog.add('/userExisting',[
 
 ]);
 
-academyDialog.add('/userCheck', [
+academyDialog.dialog('/userCheck', [
 	function(session) {
                 if(utilities.isEmpty(session.userData.name)) {
                         console.log("User name does not exists");
@@ -355,7 +365,7 @@ academyDialog.add('/userCheck', [
 
 ]);
 
-academyDialog.add('/startSession',[
+academyDialog.dialog('/startSession',[
 	        function(session) {
                 // Re-initialize the session's bot created variables.
                 session.userData.happy = "false";
@@ -412,9 +422,10 @@ academyDialog.add('/startSession',[
 
 
 // Main function where the execution starts
-academyDialog.add('/',[
+academyDialog.dialog('/',[
 	function(session) {
 		session.beginDialog('/userCheck');
+		// console.log("No Skills found for "+session.userData.name);
 	}
 		
 ]);
